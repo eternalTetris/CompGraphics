@@ -1,0 +1,196 @@
+<HTML>
+<HEAD>
+    <script>
+        function Line(ctx, x0, y0, x1, y1) {
+            var dy = Math.abs(y1-y0);
+            var dx = Math.abs(x1-x0);
+            var dmax = Math.max(dx, dy);
+            var dmin = Math.min(dx, dy);
+            var xdir = 1;
+            if (x1<x0) xdir = -1;
+            var ydir = 1;
+            if (y1<y0) ydir = -1;
+            var eps = 0;
+            var s = 1;
+            var k=2*dmin;
+            if (dy<=dx) {
+                var y = y0;
+                for (var x=x0; x*xdir<=x1*xdir; x+=xdir) {
+                    ctx.fillRect(x*s, y*s, 1*s, 1*s);
+                    eps = eps+k;
+                    if (eps>dmax) {
+                        y+=ydir;
+                        eps = eps - 2*dmax;
+                    }
+                }
+            } else {
+                var x = x0;
+                for (var y=y0; y*ydir<=y1*ydir; y+=ydir) {
+                    ctx.fillRect(x*s, y*s, 1*s, 1*s);
+                    eps = eps+k;
+                    if (eps>dmax) {
+                        x+=xdir;
+                        eps = eps - 2*dmax;
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        function borderFill(ctx, poly) {
+            var bpoints = new Array();
+            maxy = 0; miny = h;
+            for (var i=0; i<poly.length; i++) {
+                if (Math.round(poly[2*i+1])>maxy) maxy = Math.round(poly[2*i+1]);
+                if (Math.round(poly[2*i+1])<miny) miny = Math.round(poly[2*i+1]);
+            }
+            var idata = ctx.getImageData(0,0,w,h);
+            var x0 = poly[2*n-2], y0 = poly[2*n-1];
+            var x1 = poly[0], y1 = poly[1];
+            var k = (y1-y0)/(x1-x0);
+            var b = y0 - k*x0;
+            var up = y0, down = y1;
+            if (y1<y0) { up = y1; down = y0; }
+            var sign = (y1-y0)/Math.abs(y1-y0);
+            for (var j=Math.round(up); j<=Math.round(down); j+=1) {
+                if (! Array.isArray(bpoints[j]) ) {
+                    bpoints[j] = new Array();
+                }
+                bpoints[j].push( Math.round((j-b)/k) );
+            }
+            var min = Math.min(y0, y1);
+            if (! Array.isArray(bpoints[min]) ) {
+                bpoints[min] = new Array();
+            }
+            bpoints[min].push( Math.round( (min-b)/k ) );
+            for (var i = 1; i<n; i++) {
+                x0 = poly[2*i], y0 = poly[2*i+1];
+                x1 = poly[2*i-2], y1 = poly[2*i-1];
+                k = (y1-y0)/(x1-x0);
+                b = y0 - k*x0;
+                sign = (y1-y0)/Math.abs(y1-y0);
+                up = y0; down = y1;
+                if (y1<y0) { up = y1; down = y0; }
+                for (var j=Math.round(up); j<=Math.round(down); j+=1) {
+                    if (! Array.isArray(bpoints[j]) ) {
+                        bpoints[j] = new Array();
+                    }
+                    bpoints[j].push( Math.round((j-b)/k) );
+                }
+                min = Math.min(y0, y1);
+                if (! Array.isArray(bpoints[min]) ) {
+                    bpoints[min] = new Array();
+                }
+                bpoints[min].push( Math.round( (min-b)/k ) );
+            }
+            for (var ti=miny; ti<=maxy; ti++) {
+                if (! Array.isArray(bpoints[ti]) ) {
+                    continue;
+                }
+                var xarray = bpoints[ti].sort(function(a, b){return a-b;});
+                var size = xarray.length;
+                for (var k=0; k<size/2; k++) {
+                    for (var tj=xarray[k*2]+1; tj<xarray[k*2+1]; tj++) {
+                        idata.data[(ti*w+tj)*4] = 255;
+                        idata.data[(ti*w+tj)*4+3] = 255;
+                    }
+                }
+            }
+            ctx.putImageData(idata, 0, 0);
+        }
+    </script>
+<BODY>
+<canvas id='lab08.html' width='500' height='500'></canvas>
+<script>
+    var canvas = document.getElementById('lab08.html');
+    var ctx = canvas.getContext("2d");
+    var w = canvas.width, h = canvas.height;
+    var maxy = 0, miny = canvas.height;
+    var parray = new Array();
+    var n = 0;
+    var state = 0;
+    function drawPoly(ctx, poly) {
+        for (var i=1; i<n; i++) {
+            Line(ctx, poly[2*i], poly[2*i+1],
+                poly[2*i-2], poly[2*i-1]);
+        }
+        Line(ctx, poly[2*n-2], poly[2*n-1], poly[0], poly[1]);
+    }
+    canvas.addEventListener('click', function(e) {
+        if (state == 0) {
+            parray[2*n] 	= e.offsetX;
+            parray[2*n+1] 	= e.offsetY;
+            if (n!=0) {
+                Line(ctx, parray[2*n], parray[2*n+1],
+                    parray[2*n-2], parray[2*n-1]);
+            }
+            if (maxy < parray[2*n+1]) maxy = parray[2*n+1];
+            if (miny > parray[2*n+1]) miny = parray[2*n+1];
+            n++;
+        } else if (state == 1) {
+        }
+    });
+    canvas.oncontextmenu = function() {
+        if (n>1) {
+            Line(ctx, parray[2*n-2], parray[2*n-1], parray[0], parray[1]);
+        }
+        borderFill(ctx, parray);
+        state = 1;
+        // Преобразование
+        var M = [	1, 0, 0, 40,
+            0, 1, 0, 20,
+            0, 0, 1, 0,
+            0, 0, 0, 1];
+        var Rz = [	Math.cos(0.5), -1*Math.sin(0.5), 0, 0,
+            Math.sin(0.5), Math.cos(0.5), 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1];
+        var Rx = [1, 0, 0, 0,
+            0, Math.cos(0.5), 0, -1*Math.sin(0.5), 0,
+            0, Math.sin(0.5), Math.cos(0.5), 0,
+            0, 0, 0, 1];
+        var Ry = [Math.cos(0.5), 0, Math.sin(0.5), 0,
+            0, 1, 0, 0,
+            -1 *Math.sin(0.5), 0,  Math.cos(0.5), 0,
+            0, 0, 0, 1];
+        function multMv(m, v) {
+            var r = new Array();
+            for (var i=0; i<4; i++) {
+                r[i] = 0;
+                for (var j=0; j<4; j++) {
+                    r[i] += m[i*4+j]*v[j];
+                }
+            }
+            return r;
+        }
+        var narray = new Array();
+        for (var i=0; i<n; i++) {
+            var tmp = multMv(Rx, [parray[2*i], parray[2*i+1], 0, 1] );
+            narray[2*i] = tmp[0]; narray[2*i+1] = tmp[1];
+        }
+        borderFill(ctx, narray);
+        drawPoly(ctx, narray);
+        drawPoly(ctx, parray);
+        var narray = new Array();
+        for (var i=0; i<n; i++) {
+            var tmp = multMv(Ry, [parray[2*i], parray[2*i+1], 0, 1] );
+            narray[2*i] = tmp[0]; narray[2*i+1] = tmp[1];
+        }
+        borderFill(ctx, narray);
+        drawPoly(ctx, narray);
+        drawPoly(ctx, parray);
+        var narray = new Array();
+        for (var i=0; i<n; i++) {
+            var tmp = multMv(Rz, [parray[2*i], parray[2*i+1], 0, 1] );
+            narray[2*i] = tmp[0]; narray[2*i+1] = tmp[1];
+        }
+        borderFill(ctx, narray);
+        drawPoly(ctx, narray);
+        drawPoly(ctx, parray);
+
+        return false;
+    }
+</script>
+</BODY>
+</HEAD>
+</HTML>
