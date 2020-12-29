@@ -1,0 +1,44 @@
+<HTML>
+<BODY>
+<canvas id='lab01' width='400' height='400' style="border:1px solid">
+</canvas>
+<script>
+	var canvas = document.getElementById('lab01');
+	var ctx = canvas.getContext('2d');
+
+	var i = 0;
+        var j = 0;
+        var x = 0;
+        var y = 0;
+        var f = 1;
+	var directionV = 1;
+	var directionH = 1;
+
+	document.addEventListener("click", function(event) {
+		directionH = event.offsetX;	
+		directionV = event.offsetY;
+           	f = 0;	
+		});
+        function getRand(){
+         return Math.floor(Math.random()*3)-1;}
+
+	setInterval( function () {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			ctx.fillStyle = "#FF69B4";	
+			ctx.fillRect(0+i, 0+j, 100, 100);
+                        if (f == 0){
+                            i = directionH;
+                            j = directionV;
+                            f = 1;
+                            x = getRand();
+                            y = getRand();
+                         }
+                         else {
+                         i = i + x;
+                         j = j + y;
+                         }
+		}, 10);
+
+</script>
+</BODY>
+</HTML>
